@@ -1521,12 +1521,14 @@ exec_func_with_timeout() {
     $1 `eval echo $2` &
     func_pid=$!
     count=0
-    while kill -s 0 $func_pid >/dev/null 2>&1; do
+    pro=1
+    while $pro; do
+        pro=`$OCF_RESKEY_docker_env_func kill -s 0 $func_pid >/dev/null 2>&1`
         sleep 1
         count=`expr $count + 1`
         if [ $count -ge $3 ]; then
             ocf_log debug "Execute $1 time out."
-            kill -s 9 $func_pid >/dev/null 2>&1
+            $OCF_RESKEY_docker_env_func kill -s 9 $func_pid >/dev/null 2>&1
             return 0
         fi
     done
@@ -1551,8 +1553,9 @@ check_binary2() {
 
 check_config() {
     local rc=0
+    $OCF_RESKEY_docker_env_func /bin/bash -f $1
 
-    if [ ! -f "$1" ]; then
+    if [ ! $? ]; then
         if ocf_is_probe; then
            ocf_log info "Configuration file is $1 not readable during probe."
            rc=1
@@ -1581,7 +1584,7 @@ pgsql_validate_all() {
     [ $check_config_rc -eq 2 ] && return $OCF_ERR_INSTALLED
     [ $check_config_rc -eq 0 ] && : ${OCF_RESKEY_socketdir=`get_pgsql_param unix_socket_directory`}
 
-    getent passwd $OCF_RESKEY_pgdba >/dev/null 2>&1
+    $OCF_RESKEY_docker_env_func getent passwd $OCF_RESKEY_pgdba >/dev/null 2>&1
     if [ ! $? -eq 0 ]; then
         ocf_exit_reason "User $OCF_RESKEY_pgdba doesn't exist";
         return $OCF_ERR_INSTALLED;
@@ -1609,7 +1612,7 @@ pgsql_validate_all() {
     fi
 
     if is_replication || [ "$OCF_RESKEY_rep_mode" = "slave" ]; then
-        version=`cat $OCF_RESKEY_pgdata/PG_VERSION`
+        version=`$OCF_RESKEY_docker_env_func cat $OCF_RESKEY_pgdata/PG_VERSION`
         if [ `printf "$version\n9.1" | sort -n | head -1` != "9.1" ]; then
             ocf_exit_reason "Replication mode needs PostgreSQL 9.1 or higher."
             return $OCF_ERR_INSTALLED
@@ -1638,16 +1641,24 @@ pgsql_validate_all() {
             if [ "$OCF_RESKEY_rep_mode" = "sync" ]; then
                 if ! grep -q "$rep_mode_string" $OCF_RESKEY_config; then
                     ocf_log info "adding include directive into $OCF_RESKEY_config"
-                    echo "$rep_mode_string" >> $OCF_RESKEY_config
+                    $OCF_RESKEY_docker_env_func /bin/bash -c "echo \"$rep_mode_string\" >> $OCF_RESKEY_config"
                 fi
             else
-                if grep -q "$rep_mode_string" $OCF_RESKEY_config; then
+                ret=`$OCF_RESKEY_docker_env_func grep -q "$rep_mode_string" $OCF_RESKEY_config`
+                if $?; then
                     ocf_log info "deleting include directive from $OCF_RESKEY_config"
-                    sed -i "/${rep_mode_string//\//\\/}/d" $OCF_RESKEY_config
+                    $OCF_RESKEY_docker_env_func sed -i "/${rep_mode_string//\//\\/}/d" $OCF_RESKEY_config
                 fi
             fi
         fi
-        if ! mkdir -p $OCF_RESKEY_tmpdir || ! chown $OCF_RESKEY_pgdba $OCF_RESKEY_tmpdir || ! chmod 700 $OCF_RESKEY_tmpdir; then
+        $OCF_RESKEY_docker_env_func mkdir -p $OCF_RESKEY_tmpdir
+        ret_mkdir=$?
+        $OCF_RESKEY_docker_env_func chown $OCF_RESKEY_pgdba $OCF_RESKEY_tmpdir
+        ret_chown=$?
+        $OCF_RESKEY_docker_env_func chmod 700 $OCF_RESKEY_tmpdir
+        ret_chmod=$?
+
+        if ! ret_mkdir || ! ret_chown || ! ret_chmod; then
             ocf_exit_reason "Can't create directory $OCF_RESKEY_tmpdir or it is not readable by $OCF_RESKEY_pgdba"
             return $OCF_ERR_PERM
         fi
@@ -1669,10 +1680,11 @@ pgsql_validate_all() {
 #
 
 check_log_file() {
-    if [ ! -f "$1" ]
+    $OCF_RESKEY_docker_env_func /bin/bash -f $1
+    if [ ! $? ]
     then
-        touch $1 > /dev/null 2>&1
-        chown $OCF_RESKEY_pgdba:`getent passwd $OCF_RESKEY_pgdba | cut -d ":" -f 4` $1
+        $OCF_RESKEY_docker_env_func /bin/bash -c "touch $1 > /dev/null 2>&1"
+        $OCF_RESKEY_docker_env_func /bin/bash -c "chown $OCF_RESKEY_pgdba:`getent passwd $OCF_RESKEY_pgdba | cut -d ":" -f 4` $1"
     fi
 
     #Check if $OCF_RESKEY_pgdba can write to the log file
@@ -1688,20 +1700,23 @@ check_log_file() {
 # Check socket directory
 #
 check_socket_dir() {
-    if [ ! -d "$OCF_RESKEY_socketdir" ]; then
-        if ! mkdir "$OCF_RESKEY_socketdir"; then
+    $OCF_RESKEY_docker_env_func /bin/bash -d "$OCF_RESKEY_socketdir"
+    if [ ! $? ]; then
+        $OCF_RESKEY_docker_env_func mkdir "$OCF_RESKEY_socketdir"
+        if ! $?; then
             ocf_exit_reason "Can't create directory $OCF_RESKEY_socketdir"
             exit $OCF_ERR_PERM
         fi
 
-        if ! chown $OCF_RESKEY_pgdba:`getent passwd \
-             $OCF_RESKEY_pgdba | cut -d ":" -f 4` "$OCF_RESKEY_socketdir" 
+        $OCF_RESKEY_docker_env_func /bin/bash -c "chown $OCF_RESKEY_pgdba:`getent passwd $OCF_RESKEY_pgdba | cut -d ":" -f 4` \"$OCF_RESKEY_socketdir\""
+        if ! $? 
         then
             ocf_exit_reason "Can't change ownership for $OCF_RESKEY_socketdir"
             exit $OCF_ERR_PERM
         fi
 
-        if ! chmod 2775 "$OCF_RESKEY_socketdir"; then
+        $OCF_RESKEY_docker_env_func chmod 2775 "$OCF_RESKEY_socketdir"
+        if ! $?; then
             ocf_exit_reason "Can't change permissions for $OCF_RESKEY_socketdir"
             exit $OCF_ERR_PERM
         fi
