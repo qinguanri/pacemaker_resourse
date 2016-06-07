@@ -490,7 +490,7 @@ pgsql_real_start() {
     $OCF_RESKEY_docker_env_func rm -f $PIDFILE
 
     # Remove backup_label if it exists
-    file_exist=`$OCF_RESKEY_docker_env_func /bin/bash -f $BACKUPLABEL`
+    file_exist=`$OCF_RESKEY_docker_env_func ls $BACKUPLABEL`
     if [ "$?" == "0" ] && ! is_replication; then
         ocf_log info "Removing $BACKUPLABEL. The previous backup might have failed."
         $OCF_RESKEY_docker_env_func rm -f $BACKUPLABEL
@@ -568,7 +568,7 @@ pgsql_replication_start() {
         return $OCF_ERR_GENERIC
     fi
 
-    file_exist=`$OCF_RESKEY_docker_env_func /bin/bash -f $PGSQL_LOCK`
+    file_exist=`$OCF_RESKEY_docker_env_func ls $PGSQL_LOCK`
     if [ "$?" == "0" ]; then
         ocf_exit_reason "My data may be inconsistent. You have to remove $PGSQL_LOCK file to force start."
         return $OCF_ERR_GENERIC
@@ -797,7 +797,7 @@ pgsql_stop() {
 #
 
 pgsql_status() {
-     file_exist=`$OCF_RESKEY_docker_env_func /bin/bash -f $PIDFILE`
+     file_exist=`$OCF_RESKEY_docker_env_func ls $PIDFILE`
      if [ "$?" == "0" ]
      then
          PID=`$OCF_RESKEY_docker_env_func head -n 1 $PIDFILE`
@@ -1553,7 +1553,7 @@ check_binary2() {
 
 check_config() {
     local rc=0
-    $OCF_RESKEY_docker_env_func /bin/bash -f $1
+    $OCF_RESKEY_docker_env_func ls $1
 
     if [ ! $? ]; then
         if ocf_is_probe; then
@@ -1680,7 +1680,7 @@ pgsql_validate_all() {
 #
 
 check_log_file() {
-    $OCF_RESKEY_docker_env_func /bin/bash -f $1
+    $OCF_RESKEY_docker_env_func ls $1
     if [ ! $? ]
     then
         $OCF_RESKEY_docker_env_func /bin/bash -c "touch $1 > /dev/null 2>&1"
