@@ -848,9 +848,7 @@ pgsql_real_monitor() {
 
     if is_replication; then
         #Check replication state
-        output=`$OCF_RESKEY_docker_env_func su $OCF_RESKEY_pgdba -c "cd $OCF_RESKEY_pgdata; \
-                $OCF_RESKEY_psql $psql_options -U $OCF_RESKEY_pgdba \
-                -Atc \"${CHECK_MS_SQL}\""`
+        output=`$OCF_RESKEY_docker_env_func su $OCF_RESKEY_pgdba -c "cd $OCF_RESKEY_pgdata; $OCF_RESKEY_psql $psql_options -U $OCF_RESKEY_pgdba -Atc \"${CHECK_MS_SQL}\""`
         rc=$?
         if [ $rc -ne  0 ]; then
             report_psql_error $rc $loglevel
@@ -1038,9 +1036,7 @@ control_slave_status() {
     local node_name
     local number_of_nodes
 
-    all_data_status=`$OCF_RESKEY_docker_env_func su $OCF_RESKEY_pgdba -c "cd $OCF_RESKEY_pgdata; \
-                     $OCF_RESKEY_psql $psql_options -U $OCF_RESKEY_pgdba \
-                     -Atc \"${CHECK_REPLICATION_STATE_SQL}\""`
+    all_data_status=`$OCF_RESKEY_docker_env_func su $OCF_RESKEY_pgdba -c "cd $OCF_RESKEY_pgdata; $OCF_RESKEY_psql $psql_options -U $OCF_RESKEY_pgdba -Atc \"${CHECK_REPLICATION_STATE_SQL}\""`
     rc=$?
     if [ $rc -eq 0 ]; then
         if [ -n "$all_data_status" ]; then
@@ -1230,9 +1226,7 @@ get_my_location() {
     local log2
     local newer_location
 
-    output=`$OCF_RESKEY_docker_env_func su $OCF_RESKEY_pgdba -c "cd $OCF_RESKEY_pgdata; \
-            $OCF_RESKEY_psql $psql_options -U $OCF_RESKEY_pgdba \
-            -Atc \"${CHECK_XLOG_LOC_SQL}\""`
+    output=`$OCF_RESKEY_docker_env_func su $OCF_RESKEY_pgdba -c "cd $OCF_RESKEY_pgdata; $OCF_RESKEY_psql $psql_options -U $OCF_RESKEY_pgdba -Atc \"${CHECK_XLOG_LOC_SQL}\""`
     rc=$?
     if [ $rc -ne 0 ]; then
         report_psql_error $rc warn
