@@ -1555,7 +1555,7 @@ check_config() {
     local rc=0
     $OCF_RESKEY_docker_env_func ls $1
 
-    if [ ! $? ]; then
+    if [ "$?" != "0" ]; then
         if ocf_is_probe; then
            ocf_log info "Configuration file is $1 not readable during probe."
            rc=1
@@ -1658,7 +1658,7 @@ pgsql_validate_all() {
         $OCF_RESKEY_docker_env_func chmod 700 $OCF_RESKEY_tmpdir
         ret_chmod=$?
 
-        if ! ret_mkdir || ! ret_chown || ! ret_chmod; then
+        if [ "$ret_mkdir" != "0" ] || [ "$ret_chown" != "0" ] || [ "$ret_chmod" != "0" ]; then
             ocf_exit_reason "Can't create directory $OCF_RESKEY_tmpdir or it is not readable by $OCF_RESKEY_pgdba"
             return $OCF_ERR_PERM
         fi
@@ -1681,7 +1681,7 @@ pgsql_validate_all() {
 
 check_log_file() {
     $OCF_RESKEY_docker_env_func ls $1
-    if [ ! $? ]
+    if [ "$?" != "0" ]
     then
         $OCF_RESKEY_docker_env_func /bin/bash -c "touch $1 > /dev/null 2>&1"
         $OCF_RESKEY_docker_env_func /bin/bash -c "chown $OCF_RESKEY_pgdba:`getent passwd $OCF_RESKEY_pgdba | cut -d ":" -f 4` $1"
@@ -1700,23 +1700,22 @@ check_log_file() {
 # Check socket directory
 #
 check_socket_dir() {
-    $OCF_RESKEY_docker_env_func /bin/bash -d "$OCF_RESKEY_socketdir"
-    if [ ! $? ]; then
+    $OCF_RESKEY_docker_env_func ls $OCF_RESKEY_socketdir
+    if [ "$?" != "0" ]; then
         $OCF_RESKEY_docker_env_func mkdir "$OCF_RESKEY_socketdir"
-        if ! $?; then
+        if [ "$?" != "0" ]; then
             ocf_exit_reason "Can't create directory $OCF_RESKEY_socketdir"
             exit $OCF_ERR_PERM
         fi
 
         $OCF_RESKEY_docker_env_func /bin/bash -c "chown $OCF_RESKEY_pgdba:`getent passwd $OCF_RESKEY_pgdba | cut -d ":" -f 4` \"$OCF_RESKEY_socketdir\""
-        if ! $? 
-        then
+        if [ "$?" != "0" ]; then
             ocf_exit_reason "Can't change ownership for $OCF_RESKEY_socketdir"
             exit $OCF_ERR_PERM
         fi
 
         $OCF_RESKEY_docker_env_func chmod 2775 "$OCF_RESKEY_socketdir"
-        if ! $?; then
+        if [ "$?" != "0" ]; then
             ocf_exit_reason "Can't change permissions for $OCF_RESKEY_socketdir"
             exit $OCF_ERR_PERM
         fi
@@ -1725,7 +1724,7 @@ check_socket_dir() {
             ocf_exit_reason "$OCF_RESKEY_pgdba can't create files in $OCF_RESKEY_socketdir"
             exit $OCF_ERR_PERM
         fi
-        rm $OCF_RESKEY_socketdir/test.$$
+        $OCF_RESKEY_docker_env_func rm $OCF_RESKEY_socketdir/test.$$
     fi
 }
 
