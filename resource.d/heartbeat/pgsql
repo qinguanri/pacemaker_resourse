@@ -1175,7 +1175,7 @@ have_master_right() {
             continue
         else
             ocf_log info "$node xlog location : $output"
-            echo "$node $output" >> ${XLOG_NOTE_FILE}.${new}
+            $OCF_RESKEY_docker_env_func /bin/bash -c "echo \"$node $output\" >> ${XLOG_NOTE_FILE}.${new}"
             if [ "$node" = "$NODENAME" ]; then
                 mylocation=$output
             fi
