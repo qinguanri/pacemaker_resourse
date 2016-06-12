@@ -489,9 +489,6 @@ pgsql_real_start() {
     # Remove postmaster.pid if it exists
     $OCF_RESKEY_docker_env_func rm -f $PIDFILE
 
-    ## warn. todo. this command may be incorrect. guan ri need to check it
-    $OCF_RESKEY_docker_env_func rm -f $RECOVERY_CONF
-
     # Remove backup_label if it exists
     file_exist=`$OCF_RESKEY_docker_env_func ls $BACKUPLABEL`
     if [ "$?" == "0" ] && ! is_replication; then
