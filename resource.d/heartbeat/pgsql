@@ -30,7 +30,8 @@ get_pgsql_param() {
        \$dir =~ s/^'(\S*)'/\$1/;
        print \$dir;}"
 
-    perl -ne "$perl_code" < $OCF_RESKEY_config
+    $OCF_RESKEY_docker_env_func cat $OCF_RESKEY_config > tmp_pacemaker_postgresql.conf
+    perl -ne "$perl_code" < tmp_pacemaker_postgresql.conf
 }
 
 # Defaults
