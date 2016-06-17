@@ -29,7 +29,6 @@ get_pgsql_param() {
        \$dir =~ s/\s*\#.*//;
        \$dir =~ s/^'(\S*)'/\$1/;
        print \$dir;}"
-
     $OCF_RESKEY_docker_env_func cat $OCF_RESKEY_config > tmp_pacemaker_postgresql.conf
     perl -ne "$perl_code" < tmp_pacemaker_postgresql.conf
 }
@@ -50,6 +49,7 @@ OCF_RESKEY_monitor_password_default=""
 OCF_RESKEY_monitor_sql_default="select now();"
 OCF_RESKEY_check_wal_receiver_default="false"
 OCF_RESKEY_docker_env_func_default="docker exec -i pg"
+OCF_RESKEY_pg_container_name="pg"
 
 # Defaults for replication
 OCF_RESKEY_rep_mode_default=none
@@ -564,7 +564,9 @@ pgsql_replication_start() {
     change_pgsql_status "$NODENAME" "STOP"
     delete_master_baseline
     $CRM_MASTER -v $CAN_NOT_PROMOTE
-    $OCF_RESKEY_docker_env_func rm -f ${XLOG_NOTE_FILE}.* $REP_MODE_CONF $RECOVERY_CONF
+    $OCF_RESKEY_docker_env_func /bin/bash -c "rm -f ${XLOG_NOTE_FILE}.*"
+    $OCF_RESKEY_docker_env_func /bin/bash -c "rm -f $REP_MODE_CONF"
+    $OCF_RESKEY_docker_env_func /bin/bash -c "rm -f $RECOVERY_CONF"
     if ! make_recovery_conf || ! delete_xlog_location || ! set_async_mode_all; then
         return $OCF_ERR_GENERIC
     fi
@@ -604,7 +606,7 @@ pgsql_promote() {
         ocf_exit_reason "Not in a replication mode."
         return $OCF_ERR_CONFIGURED
     fi
-    $OCF_RESKEY_docker_env_func rm -f ${XLOG_NOTE_FILE}.*
+    $OCF_RESKEY_docker_env_func /bin/bash -c "rm -f ${XLOG_NOTE_FILE}.*"
 
     for target in $NODE_LIST; do
         [ "$target" = "$NODENAME" ] && continue
@@ -910,7 +912,7 @@ pgsql_replication_monitor() {
         change_pgsql_status "$NODENAME" "HS:alone"
         have_master_right
         if [ $? -eq 0 ]; then
-            $OCF_RESKEY_docker_env_func rm -f ${XLOG_NOTE_FILE}.*
+            $OCF_RESKEY_docker_env_func /bin/bash -c "rm -f ${XLOG_NOTE_FILE}.*"
         fi
     else
         output=`$CRM_ATTR_FOREVER -N "$NODENAME" \
@@ -1187,7 +1189,7 @@ have_master_right() {
     newfile=`$OCF_RESKEY_docker_env_func cat ${XLOG_NOTE_FILE}.${new} 2>/dev/null`
     if [ "$oldfile" != "$newfile" ]; then
         # reset counter
-        $OCF_RESKEY_docker_env_func rm -f ${XLOG_NOTE_FILE}.*
+        $OCF_RESKEY_docker_env_func /bin/bash -c "rm -f ${XLOG_NOTE_FILE}.*"
         $OCF_RESKEY_docker_env_func /bin/bash -c "printf \"$newfile\n\" > ${XLOG_NOTE_FILE}.0"
         return 1
     fi
@@ -1203,7 +1205,7 @@ have_master_right() {
         change_data_status "$NODENAME" "DISCONNECT"
         ocf_log info "I don't have correct master data."
         # reset counter
-        $OCF_RESKEY_docker_env_func rm -f ${XLOG_NOTE_FILE}.*
+        $OCF_RESKEY_docker_env_func /bin/bash -c "rm -f ${XLOG_NOTE_FILE}.*"
         $OCF_RESKEY_docker_env_func /bin/bash -c "printf \"$newfile\n\" > ${XLOG_NOTE_FILE}.0"
     fi
 
@@ -1539,7 +1541,7 @@ node_exist() {
 
 check_binary2() {
     $OCF_RESKEY_docker_env_func ls $1
-
+    
     if [ "$?" != "0" ]; then
         ocf_exit_reason "Setup problem: couldn't find command: $1"
         return 1
