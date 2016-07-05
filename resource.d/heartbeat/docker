@@ -187,7 +187,7 @@ monitor_cmd_exec()
 		fi
 		rc=$OCF_ERR_GENERIC
 	else 
-		ocf_log info "monitor cmd passed: exit code = $rc"
+		ocf_log debug "monitor cmd passed: exit code = $rc"
 	fi
 
 	return $rc
@@ -241,7 +241,6 @@ docker_simple_status()
 docker_monitor()
 {
 	local rc=0
-	NODENAME=$(ocf_local_nodename)
 	docker_simple_status
 	rc=$?
 
@@ -322,6 +321,9 @@ docker_start()
 docker_stop()
 {
 	local timeout=60
+	ocf_log info "stop container. switch to normal mode."
+	pcs cluster unstandby $NODENAME
+
 	docker_simple_status
 	if [ $? -eq  $OCF_NOT_RUNNING ]; then
 		remove_container
@@ -388,7 +390,7 @@ docker_validate()
 	fi 
 
 	if [ -n "$OCF_RESKEY_monitor_cmd" ]; then
-		ocf_log info "checking for nsenter, which is required when 'monitor_cmd' is specified"
+		ocf_log debug "checking for nsenter, which is required when 'monitor_cmd' is specified"
 		check_binary nsenter
 	fi
 
@@ -402,6 +404,7 @@ docker_validate()
 }
 
 : ${OCF_RESKEY_name=${OCF_RESOURCE_INSTANCE}}
+NODENAME=$(ocf_local_nodename)
 
 if [ -n "$OCF_RESKEY_container" ]; then
 	# we'll keep the container attribute around for a bit in order not to break
