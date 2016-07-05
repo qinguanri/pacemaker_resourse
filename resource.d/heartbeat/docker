@@ -262,6 +262,9 @@ docker_monitor()
 
 docker_start()
 {
+	ocf_log info "start container. switch to normal mode."
+	pcs cluster unstandby $NODENAME
+
 	local run_opts="-d --name=${CONTAINER}"
 	# check to see if the container has already started
 	docker_simple_status
@@ -321,8 +324,6 @@ docker_start()
 docker_stop()
 {
 	local timeout=60
-	ocf_log info "stop container. switch to normal mode."
-	pcs cluster unstandby $NODENAME
 
 	docker_simple_status
 	if [ $? -eq  $OCF_NOT_RUNNING ]; then
@@ -416,20 +417,26 @@ else
 fi
 
 case $__OCF_ACTION in
-meta-data) meta_data
-		exit $OCF_SUCCESS;;
-start)
-	docker_validate
-	docker_start;;
-stop)		docker_stop;;
+meta-data) 	meta_data
+			exit $OCF_SUCCESS;;
+
+start)		docker_validate
+			docker_start;;
+
+stop)		pcs cluster standby $NODENAME
+			docker_stop;;
+
 monitor)	docker_monitor;;
+
 validate-all)	docker_validate;;
+
 usage|help)	docker_usage
-		exit $OCF_SUCCESS
-		;;
-*)		docker_usage
-		exit $OCF_ERR_UNIMPLEMENTED
-		;;
+			exit $OCF_SUCCESS
+			;;
+
+*)			docker_usage
+			exit $OCF_ERR_UNIMPLEMENTED
+			;;
 esac
 rc=$?
 ocf_log debug "${OCF_RESOURCE_INSTANCE} $__OCF_ACTION : $rc"
