@@ -182,6 +182,8 @@ monitor_cmd_exec()
 
 		if [ $rc -eq 127 ]; then
 			ocf_exit_reason "monitor_cmd, ${OCF_RESKEY_monitor_cmd} , not found within container."
+			ocf_log info "not found within container, switch to standby."
+			pcs cluster standby $NODENAME
 			# there is no recovering from this, exit immediately
 			exit $OCF_ERR_ARGS
 		fi
@@ -262,9 +264,6 @@ docker_monitor()
 
 docker_start()
 {
-	ocf_log info "start container. switch to normal mode."
-	pcs cluster unstandby $NODENAME
-
 	local run_opts="-d --name=${CONTAINER}"
 	# check to see if the container has already started
 	docker_simple_status
@@ -423,8 +422,7 @@ meta-data) 	meta_data
 start)		docker_validate
 			docker_start;;
 
-stop)		pcs cluster standby $NODENAME
-			docker_stop;;
+stop)		docker_stop;;
 
 monitor)	docker_monitor;;
 
